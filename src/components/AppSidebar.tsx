@@ -56,16 +56,6 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center justify-center px-4 py-8">
-          <img
-            src="/Logo sem o fundo.png"
-            alt="VendaMax Logo"
-            className={collapsed ? "h-12 w-12" : "h-24 w-24 object-contain"}
-          />
-        </div>
-      </SidebarHeader>
-
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>

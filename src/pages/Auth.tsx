@@ -133,14 +133,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-primary p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <div className="flex justify-center mb-4">
-            <img
-              src="/Logo sem o fundo.png"
-              alt="VendaMax Logo"
-              className="h-20 w-20 object-contain"
-            />
-          </div>
-          <CardTitle className="text-2xl font-bold">VendaMax</CardTitle>
+          <CardTitle className="text-3xl font-bold">VendaMax</CardTitle>
           <CardDescription>Gerencie suas vendas com eficiência</CardDescription>
         </CardHeader>
         <CardContent>
