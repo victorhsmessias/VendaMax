@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -171,21 +170,21 @@ export default function VendaDetalhes() {
 
   if (loading) {
     return (
-      <Layout>
+      
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Carregando...</p>
         </div>
-      </Layout>
+      
     );
   }
 
   if (!venda) {
     return (
-      <Layout>
+      
         <div className="flex items-center justify-center min-h-[400px]">
           <p className="text-muted-foreground">Venda não encontrada</p>
         </div>
-      </Layout>
+      
     );
   }
 
@@ -199,7 +198,7 @@ export default function VendaDetalhes() {
   };
 
   return (
-    <Layout>
+    
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
@@ -455,6 +454,6 @@ export default function VendaDetalhes() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    
   );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +64,7 @@ export default function Vendas() {
   };
 
   return (
-    <Layout>
+    
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Vendas</h2>
@@ -121,6 +120,6 @@ export default function Vendas() {
           </div>
         </div>
       </div>
-    </Layout>
+    
   );
 }

@@ -22,23 +22,23 @@ const cepRegex = /^\d{5}-?\d{3}$/;
 
 export const clienteSchema = z.object({
   nome: z.string().trim().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }).max(100, { message: "Nome muito longo" }),
-  cpf: z.string().trim().regex(cpfRegex, { message: "CPF inválido" }).or(z.literal("")),
-  telefone: z.string().trim().regex(telefoneRegex, { message: "Telefone inválido" }).or(z.literal("")),
-  email: z.string().trim().email({ message: "E-mail inválido" }).max(255).or(z.literal("")),
+  cpf: z.string().trim().refine((val) => val === "" || cpfRegex.test(val), { message: "CPF inválido" }),
+  telefone: z.string().trim().refine((val) => val === "" || telefoneRegex.test(val), { message: "Telefone inválido" }),
+  email: z.string().trim().refine((val) => val === "" || z.string().email().safeParse(val).success, { message: "E-mail inválido" }),
   endereco: z.string().trim().max(200, { message: "Endereço muito longo" }),
   bairro: z.string().trim().max(100, { message: "Bairro muito longo" }),
   cidade: z.string().trim().max(100, { message: "Cidade muito longa" }),
   estado: z.string().trim().max(2, { message: "Use a sigla do estado (2 letras)" }),
-  cep: z.string().trim().regex(cepRegex, { message: "CEP inválido" }).or(z.literal("")),
+  cep: z.string().trim().refine((val) => val === "" || cepRegex.test(val), { message: "CEP inválido" }),
   observacoes: z.string().trim().max(1000, { message: "Observações muito longas" }),
 });
 
 export const fornecedorSchema = z.object({
   nome: z.string().trim().min(2, { message: "Nome deve ter pelo menos 2 caracteres" }).max(100, { message: "Nome muito longo" }),
-  cnpj: z.string().trim().regex(cnpjRegex, { message: "CNPJ inválido" }).or(z.literal("")),
-  telefone: z.string().trim().regex(telefoneRegex, { message: "Telefone inválido" }).or(z.literal("")),
-  email: z.string().trim().email({ message: "E-mail inválido" }).max(255).or(z.literal("")),
-  site: z.string().trim().url({ message: "URL inválida" }).or(z.literal("")),
+  cnpj: z.string().trim().refine((val) => val === "" || cnpjRegex.test(val), { message: "CNPJ inválido" }),
+  telefone: z.string().trim().refine((val) => val === "" || telefoneRegex.test(val), { message: "Telefone inválido" }),
+  email: z.string().trim().refine((val) => val === "" || z.string().email().safeParse(val).success, { message: "E-mail inválido" }),
+  site: z.string().trim().refine((val) => val === "" || z.string().url().safeParse(val).success, { message: "URL inválida" }),
   observacoes: z.string().trim().max(1000, { message: "Observações muito longas" }),
 });
 

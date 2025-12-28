@@ -17,6 +17,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -51,13 +57,12 @@ export function AppSidebar() {
   return (
     <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <div className="flex items-center gap-2 px-4 py-4">
-          <ShoppingCart className="h-6 w-6 text-sidebar-foreground" />
-          {!collapsed && (
-            <span className="font-bold text-lg text-sidebar-foreground">
-              Sistema Vendas
-            </span>
-          )}
+        <div className="flex items-center justify-center px-4 py-8">
+          <img
+            src="/Logo sem o fundo.png"
+            alt="VendaMax Logo"
+            className={collapsed ? "h-12 w-12" : "h-24 w-24 object-contain"}
+          />
         </div>
       </SidebarHeader>
 
@@ -92,14 +97,27 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span>Sair</span>}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={handleLogout}
+                className={`w-full gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
+                  collapsed ? "justify-center px-2" : "justify-start"
+                }`}
+              >
+                <LogOut className="h-5 w-5" />
+                {!collapsed && <span>Sair</span>}
+              </Button>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right">
+                <p>Sair</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </SidebarFooter>
     </Sidebar>
   );

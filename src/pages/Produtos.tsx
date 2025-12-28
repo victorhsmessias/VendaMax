@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +38,8 @@ export default function Produtos() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [produtoToDelete, setProdutoToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "", codigo: "", descricao: "", preco_compra: "", preco_venda: "", fornecedor_id: ""
   });
@@ -56,7 +58,6 @@ export default function Produtos() {
         .from("produtos")
         .select("*, fornecedores(nome)")
         .eq("user_id", user.id)
-        .eq("ativo", true)
         .order("nome");
 
       setProdutos(response?.data || []);
@@ -75,7 +76,6 @@ export default function Produtos() {
         .from("fornecedores")
         .select("id, nome")
         .eq("user_id", user.id)
-        .eq("ativo", true)
         .order("nome");
 
       setFornecedores(response?.data || []);
@@ -157,11 +157,11 @@ export default function Produtos() {
 
   const handleEdit = (produto: Produto) => {
     setFormData({
-      nome: produto.nome,
+      nome: produto.nome || "",
       codigo: produto.codigo || "",
       descricao: produto.descricao || "",
-      preco_compra: produto.preco_compra.toString(),
-      preco_venda: produto.preco_venda.toString(),
+      preco_compra: produto.preco_compra?.toString() || "",
+      preco_venda: produto.preco_venda?.toString() || "",
       fornecedor_id: produto.fornecedor_id || "",
     });
     setEditingId(produto.id);
@@ -169,18 +169,26 @@ export default function Produtos() {
     setOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente excluir este produto?")) return;
-    
+  const handleDelete = (id: string) => {
+    setProdutoToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!produtoToDelete) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
-      await (supabase as any).from("produtos").update({ ativo: false }).eq("id", id).eq("user_id", user.id);
+      await (supabase as any).from("produtos").delete().eq("id", produtoToDelete).eq("user_id", user.id);
       toast({ title: "Produto excluído com sucesso!" });
       loadProdutos();
     } catch (error: any) {
       toast({ title: "Erro ao excluir produto", description: "Tente novamente", variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setProdutoToDelete(null);
     }
   };
 
@@ -199,7 +207,7 @@ export default function Produtos() {
   );
 
   return (
-    <Layout>
+    
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Produtos</h2>
@@ -339,7 +347,24 @@ export default function Produtos() {
           </Table>
           </div>
         </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza que deseja excluir?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O produto será permanentemente excluído do banco de dados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </Layout>
+
   );
 }

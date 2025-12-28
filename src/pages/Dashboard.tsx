@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { MetricCard } from "@/components/MetricCard";
 import { DollarSign, TrendingUp, ShoppingCart, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -152,17 +151,14 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-96">
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-96">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Dashboard</h2>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -272,6 +268,5 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
-    </Layout>
   );
 }

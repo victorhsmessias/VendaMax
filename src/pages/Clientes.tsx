@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,8 @@ export default function Clientes() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     nome: "", cpf: "", telefone: "", email: "", endereco: "",
     bairro: "", cidade: "", estado: "", cep: "", observacoes: ""
@@ -51,7 +53,6 @@ export default function Clientes() {
         .from("clientes")
         .select("*")
         .eq("user_id", user.id)
-        .eq("ativo", true)
         .order("nome");
 
       setClientes(response?.data || []);
@@ -107,24 +108,43 @@ export default function Clientes() {
   };
 
   const handleEdit = (cliente: Cliente) => {
-    setFormData(cliente);
+    setFormData({
+      nome: cliente.nome || "",
+      cpf: cliente.cpf || "",
+      telefone: cliente.telefone || "",
+      email: cliente.email || "",
+      endereco: cliente.endereco || "",
+      bairro: cliente.bairro || "",
+      cidade: cliente.cidade || "",
+      estado: cliente.estado || "",
+      cep: cliente.cep || "",
+      observacoes: cliente.observacoes || "",
+    });
     setEditingId(cliente.id);
     setErrors({});
     setOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Deseja realmente excluir este cliente?")) return;
-    
+  const handleDelete = (id: string) => {
+    setClienteToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!clienteToDelete) return;
+
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
     try {
-      await (supabase as any).from("clientes").update({ ativo: false }).eq("id", id).eq("user_id", user.id);
+      await (supabase as any).from("clientes").delete().eq("id", clienteToDelete).eq("user_id", user.id);
       toast({ title: "Cliente excluído com sucesso!" });
       loadClientes();
     } catch (error: any) {
       toast({ title: "Erro ao excluir cliente", description: "Tente novamente", variant: "destructive" });
+    } finally {
+      setDeleteDialogOpen(false);
+      setClienteToDelete(null);
     }
   };
 
@@ -139,7 +159,7 @@ export default function Clientes() {
   );
 
   return (
-    <Layout>
+    
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Clientes</h2>
@@ -309,7 +329,24 @@ export default function Clientes() {
           </Table>
           </div>
         </div>
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza que deseja excluir?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta ação não pode ser desfeita. O cliente será permanentemente excluído do banco de dados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-    </Layout>
+
   );
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,7 +75,6 @@ export default function ContasPagar() {
         .from("fornecedores")
         .select("id, nome")
         .eq("user_id", user.id)
-        .eq("ativo", true)
         .order("nome");
 
       setFornecedores(response?.data || []);
@@ -212,7 +210,7 @@ export default function ContasPagar() {
   };
 
   return (
-    <Layout>
+    
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Contas a Pagar</h2>
@@ -381,6 +379,6 @@ export default function ContasPagar() {
           </DialogContent>
         </Dialog>
       </div>
-    </Layout>
+    
   );
 }

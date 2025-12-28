@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ShoppingCart } from "lucide-react";
 import { loginSchema, signupSchema, sanitizeString } from "@/lib/validations";
 
 export default function Auth() {
@@ -135,11 +134,13 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 rounded-full bg-gradient-primary flex items-center justify-center">
-              <ShoppingCart className="h-8 w-8 text-white" />
-            </div>
+            <img
+              src="/Logo sem o fundo.png"
+              alt="VendaMax Logo"
+              className="h-20 w-20 object-contain"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold">Sistema de Vendas</CardTitle>
+          <CardTitle className="text-2xl font-bold">VendaMax</CardTitle>
           <CardDescription>Gerencie suas vendas com eficiência</CardDescription>
         </CardHeader>
         <CardContent>
