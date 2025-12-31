@@ -1,169 +1,176 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MetricCard } from "@/components/MetricCard";
+import { EstoqueAlert } from "@/components/EstoqueAlert";
 import { DollarSign, TrendingUp, ShoppingCart, Users } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { LoadingState } from "@/components/ui/loading-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { SalesLineChart } from "@/components/charts/SalesLineChart";
+import { StatusPieChart } from "@/components/charts/StatusPieChart";
+import { TopProductsBarChart } from "@/components/charts/TopProductsBarChart";
+import { useDashboard } from "@/hooks/api/useDashboard";
+import { useCurrentUserId } from "@/hooks/useCurrentUser";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-
-interface DashboardMetrics {
-  totalReceber: number;
-  totalPagar: number;
-  lucroEstimado: number;
-  vendasMes: number;
-}
-
-interface ClienteDevedor {
-  nome: string;
-  total_devedor: number;
-}
-
-interface ContaPagarFornecedor {
-  fornecedor_nome: string;
-  total_pendente: number;
-}
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
-    totalReceber: 0,
-    totalPagar: 0,
-    lucroEstimado: 0,
-    vendasMes: 0,
-  });
-  const [clientesDevedores, setClientesDevedores] = useState<ClienteDevedor[]>([]);
-  const [contasPagar, setContasPagar] = useState<ContaPagarFornecedor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: userId } = useCurrentUserId();
 
+  // React Query hook
+  const { data: dashboardData, isLoading, error, refetch } = useDashboard();
+
+  // 🚀 PREFETCH: Pré-carregar rotas comuns ao carregar Dashboard
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!userId) return;
 
-  const loadDashboardData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+    // Prefetch primeira página de vendas
+    queryClient.prefetchQuery({
+      queryKey: ["vendas", "paginated", userId, 1, 10, ""],
+      queryFn: async () => {
+        const { data, error, count } = await supabase
+          .from("vendas")
+          .select("*, clientes(nome)", { count: "exact" })
+          .eq("user_id", userId)
+          .order("data_venda", { ascending: false })
+          .range(0, 9);
 
-      const vendasResponse = await (supabase as any)
-        .from("vendas")
-        .select("saldo_devedor")
-        .eq("user_id", user.id)
-        .eq("status", "PENDENTE");
+        if (error) throw error;
 
-      const vendas = vendasResponse?.data || [];
-      const totalReceber = vendas.reduce((sum: number, v: any) => sum + Number(v.saldo_devedor), 0);
+        return {
+          data: data || [],
+          totalPages: Math.ceil((count || 0) / 10),
+          totalItems: count || 0,
+          currentPage: 1,
+          pageSize: 10,
+        };
+      },
+      staleTime: 2 * 60 * 1000, // 2 minutos
+    });
 
-      const contasResponse = await (supabase as any)
-        .from("contas_pagar_fornecedor")
-        .select("saldo_devedor")
-        .eq("user_id", user.id)
-        .eq("status", "PENDENTE");
+    // Prefetch primeira página de clientes
+    queryClient.prefetchQuery({
+      queryKey: ["clientes", "paginated", userId, 1, 10, ""],
+      queryFn: async () => {
+        const { data, error, count } = await supabase
+          .from("clientes")
+          .select("*", { count: "exact" })
+          .eq("user_id", userId)
+          .eq("ativo", true)
+          .order("nome")
+          .range(0, 9);
 
-      const contas = contasResponse?.data || [];
-      const totalPagar = contas.reduce((sum: number, c: any) => sum + Number(c.saldo_devedor), 0);
+        if (error) throw error;
 
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+        return {
+          data: data || [],
+          totalPages: Math.ceil((count || 0) / 10),
+          totalItems: count || 0,
+          currentPage: 1,
+          pageSize: 10,
+        };
+      },
+      staleTime: 2 * 60 * 1000, // 2 minutos
+    });
 
-      const countResponse = await (supabase as any)
-        .from("vendas")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .gte("data_venda", startOfMonth.toISOString());
+    // Prefetch primeira página de produtos
+    queryClient.prefetchQuery({
+      queryKey: ["produtos", "paginated", userId, 1, 10, ""],
+      queryFn: async () => {
+        const { data, error, count } = await supabase
+          .from("produtos")
+          .select("*, fornecedores(nome)", { count: "exact" })
+          .eq("user_id", userId)
+          .eq("ativo", true)
+          .order("nome")
+          .range(0, 9);
 
-      const count = countResponse?.count || 0;
+        if (error) throw error;
 
-      const devedoresResponse = await (supabase as any)
-        .from("vendas")
-        .select(`
-          cliente_id,
-          saldo_devedor,
-          clientes (nome)
-        `)
-        .eq("user_id", user.id)
-        .eq("status", "PENDENTE")
-        .order("saldo_devedor", { ascending: false })
-        .limit(5);
+        return {
+          data: data || [],
+          totalPages: Math.ceil((count || 0) / 10),
+          totalItems: count || 0,
+          currentPage: 1,
+          pageSize: 10,
+        };
+      },
+      staleTime: 2 * 60 * 1000, // 2 minutos
+    });
+  }, [userId, queryClient]);
 
-      const devedores = devedoresResponse?.data || [];
-      const clientesMap = new Map<string, { nome: string; total: number }>();
-      devedores.forEach((venda: any) => {
-        const clienteNome = venda.clientes?.nome || "Cliente";
-        const atual = clientesMap.get(clienteNome) || { nome: clienteNome, total: 0 };
-        clientesMap.set(clienteNome, {
-          nome: clienteNome,
-          total: atual.total + Number(venda.saldo_devedor),
-        });
-      });
+  // 🚀 PREFETCH: Pré-carregar produtos e clientes ao hover no botão Nova Venda
+  const handleNovaVendaHover = () => {
+    if (!userId) return;
 
-      const topDevedores = Array.from(clientesMap.values())
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 5)
-        .map(c => ({ nome: c.nome, total_devedor: c.total }));
+    // Prefetch produtos
+    queryClient.prefetchQuery({
+      queryKey: ["produtos", userId],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("produtos")
+          .select("*, fornecedores(nome)")
+          .eq("user_id", userId)
+          .eq("ativo", true)
+          .order("nome");
+        return data || [];
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    });
 
-      const contasFornecedorResponse = await (supabase as any)
-        .from("contas_pagar_fornecedor")
-        .select(`
-          fornecedor_id,
-          saldo_devedor,
-          fornecedores (nome)
-        `)
-        .eq("user_id", user.id)
-        .eq("status", "PENDENTE");
-
-      const contasFornecedor = contasFornecedorResponse?.data || [];
-      const fornecedoresMap = new Map<string, { nome: string; total: number }>();
-      contasFornecedor.forEach((conta: any) => {
-        const fornecedorNome = conta.fornecedores?.nome || "Fornecedor";
-        const atual = fornecedoresMap.get(fornecedorNome) || { nome: fornecedorNome, total: 0 };
-        fornecedoresMap.set(fornecedorNome, {
-          nome: fornecedorNome,
-          total: atual.total + Number(conta.saldo_devedor),
-        });
-      });
-
-      const topContas = Array.from(fornecedoresMap.values())
-        .map(f => ({ fornecedor_nome: f.nome, total_pendente: f.total }));
-
-      setMetrics({
-        totalReceber,
-        totalPagar,
-        lucroEstimado: totalReceber - totalPagar,
-        vendasMes: count,
-      });
-      setClientesDevedores(topDevedores);
-      setContasPagar(topContas);
-    } catch (error) {
-      console.error("Erro ao carregar dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
+    // Prefetch clientes
+    queryClient.prefetchQuery({
+      queryKey: ["clientes", userId],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("clientes")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("ativo", true)
+          .order("nome");
+        return data || [];
+      },
+      staleTime: 5 * 60 * 1000, // 5 minutos
+    });
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  // Estado: Loading
+  if (isLoading) {
+    return <LoadingState message="Carregando dashboard..." />;
+  }
 
-  if (loading) {
+  // Estado: Error
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <p className="text-muted-foreground">Carregando...</p>
+      <div className="space-y-6">
+        <h2 className="text-2xl sm:text-3xl font-bold">Dashboard</h2>
+        <ErrorState error={error} retry={refetch} />
       </div>
     );
   }
+
+  if (!dashboardData) return null;
+
+  const { metrics, clientesDevedores, contasPagar } = dashboardData;
 
   return (
     <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold">Dashboard</h2>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button onClick={() => navigate("/vendas/nova")} className="flex-1 sm:flex-none">Nova Venda</Button>
-            <Button variant="outline" onClick={() => navigate("/clientes/novo")} className="flex-1 sm:flex-none">
+            <Button
+              onClick={() => navigate("/vendas/nova")}
+              onMouseEnter={handleNovaVendaHover}
+              className="flex-1 sm:flex-none"
+            >
+              Nova Venda
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/clientes?novo=true")} className="flex-1 sm:flex-none">
               Novo Cliente
             </Button>
           </div>
@@ -194,6 +201,21 @@ export default function Dashboard() {
             icon={ShoppingCart}
             variant="default"
           />
+        </div>
+
+        {/* Gráficos de Estatísticas */}
+        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <SalesLineChart days={30} />
+          <StatusPieChart />
+        </div>
+
+        <div className="grid gap-4 grid-cols-1">
+          <TopProductsBarChart limit={5} />
+        </div>
+
+        {/* Alerta de Estoque */}
+        <div className="grid gap-4 grid-cols-1">
+          <EstoqueAlert />
         </div>
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2">

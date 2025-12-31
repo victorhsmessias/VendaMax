@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUserId } from "@/hooks/useCurrentUser";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 type DashboardMetrics = {
@@ -29,19 +30,19 @@ type DashboardData = {
  * Hook para buscar dados do dashboard
  */
 export function useDashboard() {
+  const { data: userId } = useCurrentUserId();
   const { handleError } = useErrorHandler();
 
   return useQuery({
-    queryKey: ["dashboard"],
+    queryKey: ["dashboard", userId],
     queryFn: async (): Promise<DashboardData> => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!userId) throw new Error("Usuário não autenticado");
 
       // Total a receber (vendas pendentes)
       const { data: vendas } = await supabase
         .from("vendas")
         .select("saldo_devedor")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "PENDENTE");
 
       const totalReceber = (vendas || []).reduce(
@@ -53,7 +54,7 @@ export function useDashboard() {
       const { data: contas } = await supabase
         .from("contas_pagar_fornecedor")
         .select("saldo_devedor")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "PENDENTE");
 
       const totalPagar = (contas || []).reduce(
@@ -69,7 +70,7 @@ export function useDashboard() {
       const { count } = await supabase
         .from("vendas")
         .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .gte("data_venda", startOfMonth.toISOString());
 
       // Top 5 clientes devedores
@@ -80,7 +81,7 @@ export function useDashboard() {
           saldo_devedor,
           clientes (nome)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "PENDENTE")
         .order("saldo_devedor", { ascending: false })
         .limit(5);
@@ -108,7 +109,7 @@ export function useDashboard() {
           saldo_devedor,
           fornecedores (nome)
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("status", "PENDENTE");
 
       const fornecedoresMap = new Map<string, { nome: string; total: number }>();
@@ -140,6 +141,7 @@ export function useDashboard() {
         contasPagar: topContas,
       };
     },
+    enabled: !!userId,
     onError: (error) => {
       handleError(error, { context: "Ao carregar dados do dashboard", silent: true });
     },

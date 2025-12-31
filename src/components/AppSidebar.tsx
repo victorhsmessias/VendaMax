@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, Building2, Package, ShoppingCart, CreditCard, Wallet, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Building2, Package, ShoppingCart, CreditCard, Wallet, LogOut, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +16,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { invalidateCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "./ui/button";
 import {
@@ -31,12 +33,14 @@ const menuItems = [
   { title: "Produtos", url: "/produtos", icon: Package },
   { title: "Vendas", url: "/vendas", icon: ShoppingCart },
   { title: "Contas a Pagar", url: "/contas-pagar", icon: Wallet },
+  { title: "Relatórios", url: "/relatorios", icon: FileText },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
@@ -50,6 +54,9 @@ export function AppSidebar() {
         variant: "destructive",
       });
     } else {
+      // Limpar cache do usuário e todas as queries
+      invalidateCurrentUser(queryClient);
+      queryClient.clear();
       navigate("/auth");
     }
   };

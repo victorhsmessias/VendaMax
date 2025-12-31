@@ -1,17 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormField } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { LoadingState, LoadingSpinner } from "@/components/ui/loading-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
+import { useVenda, useCancelarVenda, useRegistrarPagamentoVenda } from "@/hooks/api/useVendas";
 import { ArrowLeft, Plus, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -19,108 +21,63 @@ export default function VendaDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [venda, setVenda] = useState<any>(null);
-  const [cliente, setCliente] = useState<any>(null);
-  const [itens, setItens] = useState<any[]>([]);
-  const [pagamentos, setPagamentos] = useState<any[]>([]);
+
+  // React Query hooks
+  const { data: vendaData, isLoading, error, refetch } = useVenda(id);
+  const cancelarMutation = useCancelarVenda();
+  const pagamentoMutation = useRegistrarPagamentoVenda();
+
+  // Local state (UI apenas)
   const [dialogOpen, setDialogOpen] = useState(false);
-  
   const [formaPagamento, setFormaPagamento] = useState("");
   const [valorPagamento, setValorPagamento] = useState("");
   const [numeroComprovante, setNumeroComprovante] = useState("");
   const [observacoesPagamento, setObservacoesPagamento] = useState("");
 
-  useEffect(() => {
-    carregarDados();
-  }, [id]);
-
-  const carregarDados = async () => {
-    try {
-      setLoading(true);
-
-      const { data: vendaData, error: vendaError } = await (supabase as any)
-        .from("vendas")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (vendaError) throw vendaError;
-      setVenda(vendaData);
-
-      const { data: clienteData } = await (supabase as any)
-        .from("clientes")
-        .select("*")
-        .eq("id", vendaData.cliente_id)
-        .single();
-      setCliente(clienteData);
-
-      const { data: itensData } = await (supabase as any)
-        .from("itens_venda")
-        .select(`
-          *,
-          produtos (nome, codigo)
-        `)
-        .eq("venda_id", id);
-      setItens(itensData || []);
-
-      const { data: pagamentosData } = await (supabase as any)
-        .from("pagamentos")
-        .select("*")
-        .eq("venda_id", id)
-        .order("data_pagamento", { ascending: false });
-      setPagamentos(pagamentosData || []);
-
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar dados",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const venda = vendaData?.venda;
+  const cliente = vendaData?.cliente;
+  const itens = vendaData?.itens || [];
+  const pagamentos = vendaData?.pagamentos || [];
 
   const registrarPagamento = async () => {
+    if (!id) return;
+
+    const valor = parseFloat(valorPagamento);
+
+    if (!valor || valor <= 0) {
+      toast({
+        title: "Valor inválido",
+        description: "Informe um valor válido para o pagamento",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (venda && valor > venda.saldo_devedor) {
+      toast({
+        title: "Valor excede saldo",
+        description: `O valor não pode ser maior que o saldo devedor (R$ ${venda.saldo_devedor.toFixed(2)})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formaPagamento) {
+      toast({
+        title: "Forma de pagamento obrigatória",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const valor = parseFloat(valorPagamento);
-      
-      if (!valor || valor <= 0) {
-        toast({
-          title: "Valor inválido",
-          description: "Informe um valor válido para o pagamento",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (valor > venda.saldo_devedor) {
-        toast({
-          title: "Valor excede saldo",
-          description: `O valor não pode ser maior que o saldo devedor (R$ ${venda.saldo_devedor.toFixed(2)})`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!formaPagamento) {
-        toast({
-          title: "Forma de pagamento obrigatória",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await (supabase as any).from("pagamentos").insert({
+      await pagamentoMutation.mutateAsync({
         venda_id: id,
         valor,
         forma_pagamento: formaPagamento,
-        numero_comprovante: numeroComprovante || null,
-        observacoes: observacoesPagamento || null,
+        numero_comprovante: numeroComprovante || undefined,
+        observacoes: observacoesPagamento || undefined,
       });
-
-      if (error) throw error;
 
       toast({
         title: "Pagamento registrado",
@@ -132,61 +89,64 @@ export default function VendaDetalhes() {
       setValorPagamento("");
       setNumeroComprovante("");
       setObservacoesPagamento("");
-      carregarDados();
-
     } catch (error: any) {
       toast({
         title: "Erro ao registrar pagamento",
-        description: error.message,
+        description: error.message || "Tente novamente",
         variant: "destructive",
       });
     }
   };
 
   const cancelarVenda = async () => {
-    try {
-      const { error } = await (supabase as any)
-        .from("vendas")
-        .update({ status: "CANCELADO" })
-        .eq("id", id);
+    if (!id) return;
 
-      if (error) throw error;
+    try {
+      await cancelarMutation.mutateAsync(id);
 
       toast({
         title: "Venda cancelada",
         description: "A venda foi cancelada com sucesso",
       });
-
-      carregarDados();
-
     } catch (error: any) {
       toast({
         title: "Erro ao cancelar venda",
-        description: error.message,
+        description: error.message || "Tente novamente",
         variant: "destructive",
       });
     }
   };
 
-  if (loading) {
+  // Estado: Loading
+  if (isLoading) {
+    return <LoadingState message="Carregando detalhes da venda..." />;
+  }
+
+  // Estado: Error
+  if (error) {
     return (
-      
-        <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-muted-foreground">Carregando...</p>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/vendas")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-2xl sm:text-3xl font-bold">Detalhes da Venda</h1>
         </div>
-      
+        <ErrorState error={error} retry={refetch} />
+      </div>
     );
   }
 
+  // Estado: Venda não encontrada
   if (!venda) {
     return (
-      
-        <div className="flex items-center justify-center min-h-[400px]">
-          <p className="text-muted-foreground">Venda não encontrada</p>
-        </div>
-      
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">Venda não encontrada</p>
+      </div>
     );
   }
+
+  const isMutating = cancelarMutation.isLoading || pagamentoMutation.isLoading;
 
   const getStatusBadge = (status: string) => {
     const variants: any = {
@@ -198,8 +158,7 @@ export default function VendaDetalhes() {
   };
 
   return (
-    
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/vendas")}>
@@ -226,13 +185,13 @@ export default function VendaDetalhes() {
                     </DialogHeader>
                     <div className="space-y-4">
                       <div>
-                        <Label>Saldo Devedor</Label>
+                        <label className="text-sm font-medium">Saldo Devedor</label>
                         <p className="text-2xl font-bold text-primary">
                           R$ {venda.saldo_devedor.toFixed(2)}
                         </p>
                       </div>
-                      <div>
-                        <Label htmlFor="valor">Valor do Pagamento *</Label>
+
+                      <FormField label="Valor do Pagamento" required htmlFor="valor">
                         <Input
                           id="valor"
                           type="number"
@@ -241,11 +200,11 @@ export default function VendaDetalhes() {
                           onChange={(e) => setValorPagamento(e.target.value)}
                           placeholder="0.00"
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor="forma">Forma de Pagamento *</Label>
+                      </FormField>
+
+                      <FormField label="Forma de Pagamento" required htmlFor="forma">
                         <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                          <SelectTrigger>
+                          <SelectTrigger id="forma">
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
@@ -256,26 +215,31 @@ export default function VendaDetalhes() {
                             <SelectItem value="TRANSFERENCIA">Transferência</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="comprovante">Número do Comprovante</Label>
+                      </FormField>
+
+                      <FormField label="Número do Comprovante" htmlFor="comprovante">
                         <Input
                           id="comprovante"
                           value={numeroComprovante}
                           onChange={(e) => setNumeroComprovante(e.target.value)}
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor="obs">Observações</Label>
+                      </FormField>
+
+                      <FormField label="Observações" htmlFor="obs">
                         <Textarea
                           id="obs"
                           value={observacoesPagamento}
                           onChange={(e) => setObservacoesPagamento(e.target.value)}
                           rows={3}
                         />
-                      </div>
-                      <Button onClick={registrarPagamento} className="w-full">
-                        Confirmar Pagamento
+                      </FormField>
+                      <Button
+                        onClick={registrarPagamento}
+                        disabled={pagamentoMutation.isLoading}
+                        className="w-full"
+                      >
+                        {pagamentoMutation.isLoading && <LoadingSpinner className="mr-2" size="sm" />}
+                        {pagamentoMutation.isLoading ? "Processando..." : "Confirmar Pagamento"}
                       </Button>
                     </div>
                   </DialogContent>
@@ -296,8 +260,14 @@ export default function VendaDetalhes() {
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Não</AlertDialogCancel>
-                      <AlertDialogAction onClick={cancelarVenda}>Sim, Cancelar</AlertDialogAction>
+                      <AlertDialogCancel disabled={cancelarMutation.isLoading}>Não</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={cancelarVenda}
+                        disabled={cancelarMutation.isLoading}
+                      >
+                        {cancelarMutation.isLoading && <LoadingSpinner className="mr-2" size="sm" />}
+                        {cancelarMutation.isLoading ? "Cancelando..." : "Sim, Cancelar"}
+                      </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -454,6 +424,5 @@ export default function VendaDetalhes() {
           </CardContent>
         </Card>
       </div>
-    
   );
 }

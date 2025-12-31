@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useState } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { ThemeToggle } from "./ThemeToggle";
+import { NotificationCenter } from "./NotificationCenter";
 import { supabase } from "@/integrations/supabase/client";
 
 interface LayoutProps {
@@ -33,6 +35,10 @@ export function Layout({ children }: LayoutProps) {
                 Olá, {userName}!
               </h1>
             )}
+            <div className="ml-auto flex items-center gap-2">
+              <NotificationCenter />
+              <ThemeToggle />
+            </div>
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </div>

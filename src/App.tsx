@@ -19,6 +19,7 @@ const Vendas = lazy(() => import("./pages/Vendas"));
 const NovaVenda = lazy(() => import("./pages/NovaVenda"));
 const VendaDetalhes = lazy(() => import("./pages/VendaDetalhes"));
 const ContasPagar = lazy(() => import("./pages/ContasPagar"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -26,7 +27,9 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 30000, // 30 segundos
+      staleTime: 2 * 60 * 1000, // 2 minutos (dados considerados "fresh")
+      gcTime: 5 * 60 * 1000, // 5 minutos (cache persiste por 5 min após não usar)
+      refetchOnMount: true, // Revalidar ao montar se stale
     },
     mutations: {
       retry: false,
@@ -97,8 +100,8 @@ const App = () => (
                 <Route path="/vendas/nova" element={<NovaVenda />} />
                 <Route path="/vendas/:id" element={<VendaDetalhes />} />
                 <Route path="/contas-pagar" element={<ContasPagar />} />
+                <Route path="/relatorios" element={<Relatorios />} />
               </Route>
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -73,3 +73,4 @@ Thumbs.db
 .vercel
 
 node_modules
+supabase
