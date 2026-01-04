@@ -225,35 +225,82 @@ export function useCreateVenda() {
     }) => {
       if (!userId) throw new Error("Usuário não autenticado");
 
-      // Validação
+      // Gerar número da venda no formato VND-YYYYMMDD-XXXX
+      // Usa timestamp para garantir unicidade mesmo em múltiplas vendas simultâneas
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const timestampSuffix = now.getTime().toString().slice(-4);
+      const numeroVenda = `VND-${dateStr}-${timestampSuffix}`;
+
+      // MODO MANUAL: Venda sem itens (valor direto)
       if (!params.itens || params.itens.length === 0) {
-        throw new Error("A venda deve ter pelo menos um item");
+        // Inserir venda diretamente sem itens
+        const { data, error } = await supabase
+          .from("vendas")
+          .insert({
+            user_id: userId,
+            cliente_id: params.venda.cliente_id,
+            numero_venda: numeroVenda,
+            data_venda: params.venda.data_venda || new Date().toISOString(),
+            valor_bruto: params.venda.valor_bruto || 0,
+            desconto: params.venda.desconto || 0,
+            valor_total: params.venda.valor_total,
+            valor_pago: params.venda.valor_pago || 0,
+            observacoes: params.venda.observacoes || null,
+            // saldo_devedor e status são calculados automaticamente pelo trigger
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
       }
 
-      // Chama função transacional do banco
-      const { data, error } = await supabase.rpc("create_venda_with_items", {
-        p_user_id: userId,
-        p_cliente_id: params.venda.cliente_id,
-        p_data_venda: params.venda.data_venda || new Date().toISOString(),
-        p_valor_bruto: params.venda.valor_bruto || 0,
-        p_desconto: params.venda.desconto || 0,
-        p_valor_total: params.venda.valor_total,
-        p_valor_pago: params.venda.valor_pago || 0,
-        p_observacoes: params.venda.observacoes || null,
-        p_itens: params.itens.map(item => ({
-          produto_id: item.produto_id,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco_unitario,
-          custo_unitario: item.custo_unitario,
-        })),
-      });
+      // MODO COM PRODUTOS: Inserir venda e itens
+      // 1. Inserir venda
+      const { data: vendaData, error: vendaError } = await supabase
+        .from("vendas")
+        .insert({
+          user_id: userId,
+          cliente_id: params.venda.cliente_id,
+          numero_venda: numeroVenda,
+          data_venda: params.venda.data_venda || new Date().toISOString(),
+          valor_bruto: params.venda.valor_bruto || 0,
+          desconto: params.venda.desconto || 0,
+          valor_total: params.venda.valor_total,
+          valor_pago: params.venda.valor_pago || 0,
+          observacoes: params.venda.observacoes || null,
+          // saldo_devedor e status são calculados automaticamente pelo trigger
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
-        throw new Error("Erro ao criar venda: resposta vazia do servidor");
+      if (vendaError) throw vendaError;
+
+      // 2. Inserir itens da venda
+      const itensParaInserir = params.itens.map(item => ({
+        user_id: userId,
+        venda_id: vendaData.id,
+        produto_id: item.produto_id,
+        quantidade: item.quantidade,
+        preco_unitario: item.preco_unitario,
+        custo_unitario: item.custo_unitario,
+      }));
+
+      const { error: itensError } = await supabase
+        .from("itens_venda")
+        .insert(itensParaInserir);
+
+      if (itensError) {
+        // Rollback: deletar venda se itens falharem
+        await supabase.from("vendas").delete().eq("id", vendaData.id);
+        throw itensError;
       }
 
-      return data[0];
+      // O estoque é atualizado automaticamente pelo trigger atualizar_estoque_venda_trigger
+      // após inserir itens_venda, não precisa chamar manualmente
+
+      return vendaData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vendas"] });

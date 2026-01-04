@@ -53,8 +53,8 @@ export default function NovaVenda() {
   const { data: fornecedores, isLoading: fornecedoresLoading, error: fornecedoresError } = useFornecedores();
   const createVendaMutation = useCreateVenda();
 
-  // Local state - Modo de venda
-  const [modoManual, setModoManual] = useState(false);
+  // Local state - Modo de venda (padrão: manual)
+  const [modoManual, setModoManual] = useState(true);
 
   // Local state - Comum a ambos os modos
   const [clienteId, setClienteId] = useState("");
