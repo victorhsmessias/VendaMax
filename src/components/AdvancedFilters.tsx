@@ -159,7 +159,6 @@ export function AdvancedFilters({
                         selected={filters.dateFrom ? new Date(filters.dateFrom) : undefined}
                         onSelect={(date) => handleDateChange("dateFrom", date)}
                         initialFocus
-                        locale={ptBR}
                       />
                     </PopoverContent>
                   </Popover>
@@ -189,7 +188,6 @@ export function AdvancedFilters({
                         selected={filters.dateTo ? new Date(filters.dateTo) : undefined}
                         onSelect={(date) => handleDateChange("dateTo", date)}
                         initialFocus
-                        locale={ptBR}
                       />
                     </PopoverContent>
                   </Popover>

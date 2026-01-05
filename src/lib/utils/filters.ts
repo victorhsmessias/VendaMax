@@ -18,7 +18,36 @@ export interface FilterConfig {
  */
 export function saveFiltersToStorage(key: string, filters: FilterConfig): void {
   try {
-    localStorage.setItem(`filters_${key}`, JSON.stringify(filters));
+    // Limpar valores vazios antes de salvar
+    const cleaned: FilterConfig = {};
+
+    Object.entries(filters).forEach(([filterKey, value]) => {
+      // Ignorar strings vazias
+      if (typeof value === "string" && value.trim() === "") {
+        return;
+      }
+
+      // Ignorar arrays vazios
+      if (Array.isArray(value) && value.length === 0) {
+        return;
+      }
+
+      // Ignorar undefined/null
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      // Manter valores válidos
+      cleaned[filterKey] = value;
+    });
+
+    // Só salvar se houver filtros válidos
+    if (Object.keys(cleaned).length > 0) {
+      localStorage.setItem(`filters_${key}`, JSON.stringify(cleaned));
+    } else {
+      // Se não há filtros válidos, remover do localStorage
+      localStorage.removeItem(`filters_${key}`);
+    }
   } catch (error) {
     console.error("Erro ao salvar filtros:", error);
   }
@@ -31,7 +60,33 @@ export function loadFiltersFromStorage(key: string): FilterConfig | null {
   try {
     const stored = localStorage.getItem(`filters_${key}`);
     if (!stored) return null;
-    return JSON.parse(stored);
+
+    const parsed = JSON.parse(stored);
+
+    // Limpar valores vazios/inválidos que podem causar problemas (especialmente no Safari)
+    const cleaned: FilterConfig = {};
+
+    Object.entries(parsed).forEach(([filterKey, value]) => {
+      // Ignorar strings vazias
+      if (typeof value === "string" && value.trim() === "") {
+        return;
+      }
+
+      // Ignorar arrays vazios
+      if (Array.isArray(value) && value.length === 0) {
+        return;
+      }
+
+      // Ignorar undefined/null
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      // Manter valores válidos
+      cleaned[filterKey] = value;
+    });
+
+    return Object.keys(cleaned).length > 0 ? cleaned : null;
   } catch (error) {
     console.error("Erro ao carregar filtros:", error);
     return null;
@@ -54,9 +109,15 @@ export function clearFiltersFromStorage(key: string): void {
  */
 export function hasActiveFilters(filters: FilterConfig): boolean {
   return Object.entries(filters).some(([key, value]) => {
-    if (key === "search" && value === "") return false;
+    // Ignorar strings vazias
+    if (typeof value === "string" && value.trim() === "") return false;
+
+    // Ignorar arrays vazios
     if (Array.isArray(value) && value.length === 0) return false;
+
+    // Ignorar undefined/null
     if (value === undefined || value === null) return false;
+
     return true;
   });
 }

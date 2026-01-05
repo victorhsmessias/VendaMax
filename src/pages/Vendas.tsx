@@ -56,6 +56,31 @@ export default function Vendas() {
   // Mutation para deletar venda
   const deleteVendaMutation = useDeleteVenda();
 
+  // Limpar filtros corrompidos do localStorage ao montar (fix para Safari)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('filters_vendas');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Se todos os valores forem vazios, limpar
+        const hasValidFilter = Object.values(parsed).some(value => {
+          if (typeof value === 'string' && value.trim() !== '') return true;
+          if (Array.isArray(value) && value.length > 0) return true;
+          if (typeof value === 'number') return true;
+          return false;
+        });
+
+        if (!hasValidFilter) {
+          console.log('[VendaMax] Limpando filtros vazios do localStorage');
+          localStorage.removeItem('filters_vendas');
+        }
+      }
+    } catch (error) {
+      console.error('[VendaMax] Erro ao verificar filtros:', error);
+      localStorage.removeItem('filters_vendas');
+    }
+  }, []);
+
   // Filtros avançados com persistência
   const { filters, setFilter, resetFilters, activeCount } = useFilters("vendas", {
     search: "",

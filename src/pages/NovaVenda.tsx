@@ -20,6 +20,13 @@ import { useCreateVenda } from "@/hooks/api/useVendas";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, ShoppingCart, DollarSign, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command";
 
 interface Cliente {
   id: string;
@@ -462,18 +469,33 @@ export default function NovaVenda() {
                 <CardTitle>Informações da Venda</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField label="Cliente" required htmlFor="cliente">
-                  <Select value={clienteId} onValueChange={setClienteId} required>
-                    <SelectTrigger id="cliente">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientes?.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormField>
+                <FormField label="Cliente" required>
+  <Select value={clienteId} onValueChange={setClienteId}>
+    <SelectTrigger>
+      <SelectValue placeholder="Digite ou selecione o cliente..." />
+    </SelectTrigger>
+
+    <SelectContent>
+      <Command>
+        <CommandInput placeholder="Buscar cliente..." />
+
+        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+
+        <CommandGroup>
+          {clientes?.map((cliente) => (
+            <CommandItem
+              key={cliente.id}
+              value={cliente.nome}
+              onSelect={() => setClienteId(cliente.id)}
+            >
+              {cliente.nome}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </Command>
+    </SelectContent>
+  </Select>
+</FormField>
 
                 <FormField label="Observações" htmlFor="observacoes">
                   <Textarea id="observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} />
