@@ -85,9 +85,10 @@ export function useVendasPaginated(page: number = 1, pageSize: number = 10, filt
         .eq("user_id", userId)
         .order("data_venda", { ascending: false });
 
-      // Filtro de busca por texto (numero_venda ou nome do cliente)
+      // Filtro de busca por texto (apenas numero_venda)
+      // NOTA: Busca por nome do cliente não é possível aqui porque clientes() é uma relação
       if (filters.search) {
-        query = query.or(`numero_venda.ilike.%${filters.search}%,clientes.nome.ilike.%${filters.search}%`);
+        query = query.ilike("numero_venda", `%${filters.search}%`);
       }
 
       // Filtro de data inicial
@@ -133,7 +134,7 @@ export function useVendasPaginated(page: number = 1, pageSize: number = 10, filt
       };
     },
     enabled: !!userId,
-    keepPreviousData: true, // IMPORTANTE: mantém dados anteriores durante transição de página
+    placeholderData: (previousData) => previousData, // IMPORTANTE: mantém dados anteriores durante transição de página
     staleTime: 1 * 60 * 1000, // 1 minuto - vendas mudam com frequência moderada
     gcTime: 5 * 60 * 1000, // 5 minutos
     refetchOnWindowFocus: true, // Revalidar ao focar janela (dados importantes)
@@ -392,6 +393,41 @@ export function useCancelarVenda() {
         queryClient.invalidateQueries({ queryKey: ["vendas", data.id] });
       }
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+/**
+ * Hook para deletar uma venda permanentemente do banco de dados
+ *
+ * ⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL e deleta a venda e todos os itens relacionados
+ */
+export function useDeleteVenda() {
+  const { data: userId } = useCurrentUserId();
+  const queryClient = useQueryClient();
+  const { handleError } = useErrorHandler();
+
+  return useMutation({
+    mutationFn: async (vendaId: string) => {
+      if (!userId) throw new Error("Usuário não autenticado");
+
+      // Deletar venda (itens_venda serão deletados em cascata pelo banco)
+      const { error } = await supabase
+        .from("vendas")
+        .delete()
+        .eq("id", vendaId)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+      return { id: vendaId };
+    },
+    onSuccess: () => {
+      // Invalidar todas as queries relacionadas a vendas
+      queryClient.invalidateQueries({ queryKey: ["vendas"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => {
+      handleError(error, { context: "Ao excluir venda" });
     },
   });
 }

@@ -37,13 +37,18 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
+
+  // Fechar sidebar ao clicar em um link (especialmente útil em mobile)
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -75,6 +80,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
+                        onClick={handleLinkClick}
                         className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${
                           isActive
                             ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"

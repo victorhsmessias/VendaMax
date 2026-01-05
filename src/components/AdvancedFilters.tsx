@@ -118,7 +118,7 @@ export function AdvancedFilters({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96" align="start">
+      <PopoverContent className="w-80 sm:w-96" align="start">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-medium leading-none">Filtros Avançados</h4>
@@ -134,7 +134,7 @@ export function AdvancedFilters({
           {showDateRange && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Período</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {/* Data Inicial */}
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">{dateFromLabel}</Label>
@@ -226,7 +226,7 @@ export function AdvancedFilters({
           {showValueRange && (
             <div className="space-y-2">
               <Label className="text-sm font-medium">Valor</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">{valueMinLabel}</Label>
                   <Input

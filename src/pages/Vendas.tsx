@@ -9,7 +9,17 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { AdvancedFilters } from "@/components/AdvancedFilters";
 import { ExportButton } from "@/components/ExportButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useVendasPaginated } from "@/hooks/api/useVendas";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useVendasPaginated, useDeleteVenda } from "@/hooks/api/useVendas";
 import { useVendasStatistics } from "@/hooks/api/useStatistics";
 import { useClientes } from "@/hooks/api/useClientes";
 import { usePagination } from "@/hooks/usePagination";
@@ -19,9 +29,10 @@ import { useCurrentUserId } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Plus, Eye, Search } from "lucide-react";
+import { Plus, Eye, Search, Trash2 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils/currency";
 import { formatCurrencyForExport, formatDateForExport } from "@/lib/utils/export";
+import { toast } from "sonner";
 
 interface Venda {
   id: string;
@@ -38,6 +49,12 @@ export default function Vendas() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: userId } = useCurrentUserId();
+
+  // Estado para controlar o dialog de confirmação de exclusão
+  const [vendaToDelete, setVendaToDelete] = useState<Venda | null>(null);
+
+  // Mutation para deletar venda
+  const deleteVendaMutation = useDeleteVenda();
 
   // Filtros avançados com persistência
   const { filters, setFilter, resetFilters, activeCount } = useFilters("vendas", {
@@ -169,6 +186,19 @@ export default function Vendas() {
     });
   };
 
+  // Função para confirmar e executar a exclusão da venda
+  const handleConfirmDelete = async () => {
+    if (!vendaToDelete) return;
+
+    try {
+      await deleteVendaMutation.mutateAsync(vendaToDelete.id);
+      toast.success("Venda excluída com sucesso!");
+      setVendaToDelete(null);
+    } catch (error) {
+      // Erro já é tratado pelo hook useDeleteVenda
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "destructive" | "outline"> = {
       PAGO: "default",
@@ -231,7 +261,7 @@ export default function Vendas() {
           <div className="flex items-center gap-2 flex-1 min-w-[250px]">
             <Search className="h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Buscar por número da venda ou cliente..."
+              placeholder="Buscar por número da venda..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
@@ -379,9 +409,28 @@ export default function Vendas() {
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{getStatusBadge(venda.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/vendas/${venda.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/vendas/${venda.id}`)}
+                          title="Ver detalhes"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVendaToDelete(venda);
+                          }}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Excluir venda"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   ))
@@ -406,6 +455,33 @@ export default function Vendas() {
             </div>
           )}
         </div>
+
+        {/* Dialog de confirmação de exclusão */}
+        <AlertDialog open={!!vendaToDelete} onOpenChange={(open) => !open && setVendaToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir a venda <strong>{vendaToDelete?.numero_venda}</strong>?
+                <br />
+                <br />
+                Esta ação é <strong>irreversível</strong> e irá excluir permanentemente a venda e todos os seus itens do banco de dados.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleteVendaMutation.isPending}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={deleteVendaMutation.isPending}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                {deleteVendaMutation.isPending ? "Excluindo..." : "Sim, excluir venda"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 }

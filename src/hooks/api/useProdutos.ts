@@ -104,7 +104,7 @@ export function useProdutosPaginated(page: number = 1, pageSize: number = 10, se
       };
     },
     enabled: !!userId,
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 5 * 60 * 1000, // 5 minutos - produtos mudam raramente
     gcTime: 10 * 60 * 1000, // 10 minutos
     refetchOnWindowFocus: false, // Não revalidar ao focar (dados estáveis)

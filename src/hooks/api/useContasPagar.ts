@@ -135,7 +135,7 @@ export function useContasPagarPaginated(page: number = 1, pageSize: number = 10,
       };
     },
     enabled: !!userId,
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 2 * 60 * 1000, // 2 minutos - contas a pagar são importantes e mudam moderadamente
     gcTime: 5 * 60 * 1000, // 5 minutos
     refetchOnWindowFocus: true, // Revalidar ao focar (dados financeiros importantes)

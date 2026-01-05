@@ -250,13 +250,13 @@ export default function Clientes() {
                 Novo Cliente
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-sm sm:max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? "Editar Cliente" : "Novo Cliente"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField label="Nome" error={errors.nome} required htmlFor="nome">
                     <Input
                       id="nome"

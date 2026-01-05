@@ -1,5 +1,6 @@
 import { lazy, Suspense, ComponentType } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 
 interface LazyDialogProps {
   open: boolean;
@@ -21,7 +22,12 @@ export function LazyDialog({ open, onOpenChange, component: Component, ...props 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <Suspense
         fallback={
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
+            <DialogHeader>
+              <VisuallyHidden>
+                <DialogTitle>Carregando...</DialogTitle>
+              </VisuallyHidden>
+            </DialogHeader>
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>

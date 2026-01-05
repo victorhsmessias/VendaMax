@@ -112,7 +112,7 @@ export function useClientesPaginated(page: number = 1, pageSize: number = 10, fi
       };
     },
     enabled: !!userId,
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     staleTime: 5 * 60 * 1000, // 5 minutos - clientes mudam raramente
     gcTime: 10 * 60 * 1000, // 10 minutos
     refetchOnWindowFocus: false, // Não revalidar ao focar (dados estáveis)
