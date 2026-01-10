@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -55,14 +55,24 @@ export default function ContasPagar() {
 
   // Busca com debouncing (sincronizada com filters.search)
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
-  const debouncedSearch = useDebounce(searchTerm, 500);
+  const debouncedSearch = useDebounce(searchTerm);
+  const isInitialMountRef = useRef(true);
 
   // Sincronizar searchTerm com filters.search quando debounced
   useEffect(() => {
     if (debouncedSearch !== filters.search) {
       setFilter("search", debouncedSearch);
     }
-  }, [debouncedSearch]);
+  }, [debouncedSearch, setFilter]);
+
+  // Sincronizar searchTerm com filters.search apenas no mount inicial (Safari-safe)
+  // Isso garante que ao carregar do localStorage, o campo de busca seja preenchido
+  useEffect(() => {
+    if (isInitialMountRef.current && filters.search && filters.search !== searchTerm) {
+      setSearchTerm(filters.search);
+      isInitialMountRef.current = false;
+    }
+  }, [filters.search]);
 
   // Paginação
   const PAGE_SIZE = 10;

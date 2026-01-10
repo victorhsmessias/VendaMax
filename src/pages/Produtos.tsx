@@ -41,7 +41,7 @@ export default function Produtos() {
 
   // Busca com debouncing
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearch = useDebounce(searchTerm, 500);
+  const debouncedSearch = useDebounce(searchTerm);
 
   // Paginação
   const PAGE_SIZE = 10;
@@ -61,7 +61,7 @@ export default function Produtos() {
   // Resetar para página 1 quando a busca mudar
   useEffect(() => {
     goToPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, goToPage]);
 
   // Local state (UI apenas)
   const [open, setOpen] = useState(false);
@@ -375,6 +375,15 @@ export default function Produtos() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
+        {searchTerm && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchTerm("")}
+          >
+            Limpar
+          </Button>
+        )}
       </div>
 
       <div className="bg-card rounded-lg border">

@@ -47,6 +47,64 @@ export function useFornecedores() {
 }
 
 /**
+ * Hook para buscar fornecedores com paginação
+ *
+ * 📄 PAGINAÇÃO: Carrega apenas uma página de fornecedores por vez para melhor performance
+ * 🔍 BUSCA: Filtra por nome, CNPJ, telefone ou email (server-side)
+ *
+ * @param page - Número da página (começa em 1)
+ * @param pageSize - Número de itens por página (padrão: 10)
+ * @param search - Termo de busca (filtra por nome, CNPJ, telefone ou email)
+ * @returns Dados paginados com informações de totalPages e totalItems
+ */
+export function useFornecedoresPaginated(page: number = 1, pageSize: number = 10, search: string = "") {
+  const { data: userId } = useCurrentUserId();
+  const { handleError } = useErrorHandler();
+
+  return useQuery({
+    queryKey: ["fornecedores", "paginated", userId, page, pageSize, search],
+    queryFn: async () => {
+      if (!userId) throw new Error("Usuário não autenticado");
+
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from("fornecedores")
+        .select("*", { count: "exact" })
+        .eq("user_id", userId)
+        .eq("ativo", true)
+        .order("nome");
+
+      // Adicionar filtro de busca se fornecido (busca por nome, CNPJ, telefone ou email)
+      if (search) {
+        query = query.or(`nome.ilike.%${search}%,cnpj.ilike.%${search}%,telefone.ilike.%${search}%,email.ilike.%${search}%`);
+      }
+
+      const { data, error, count } = await query.range(from, to);
+
+      if (error) throw error;
+
+      return {
+        data: data as Fornecedor[],
+        totalPages: Math.ceil((count || 0) / pageSize),
+        totalItems: count || 0,
+        currentPage: page,
+        pageSize,
+      };
+    },
+    enabled: !!userId,
+    placeholderData: (previousData) => previousData,
+    staleTime: 10 * 60 * 1000, // 10 minutos - fornecedores mudam muito raramente
+    gcTime: 15 * 60 * 1000, // 15 minutos
+    refetchOnWindowFocus: false, // Não revalidar ao focar (dados muito estáveis)
+    onError: (error) => {
+      handleError(error, { context: "Ao carregar fornecedores" });
+    },
+  });
+}
+
+/**
  * Hook para criar novo fornecedor
  *
  * 🚀 OPTIMISTIC UPDATE: Adiciona fornecedor instantaneamente à lista

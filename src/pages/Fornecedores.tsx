@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,9 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { LoadingState, LoadingSpinner } from "@/components/ui/loading-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { useToast } from "@/hooks/use-toast";
-import { useFornecedores, useCreateFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/api/useFornecedores";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { useFornecedoresPaginated, useCreateFornecedor, useUpdateFornecedor, useDeleteFornecedor } from "@/hooks/api/useFornecedores";
+import { usePagination } from "@/hooks/usePagination";
+import { useDebounce } from "@/hooks/useDebounce";
+import { Plus, Edit, Trash2, Search } from "lucide-react";
 import { fornecedorSchema, sanitizeFormData, prepareForDatabase, formatCNPJ, formatTelefone } from "@/lib/validations";
 
 interface Fornecedor {
@@ -26,11 +29,28 @@ interface Fornecedor {
 export default function Fornecedores() {
   const { toast } = useToast();
 
-  // React Query hooks
-  const { data: fornecedores, isLoading, error, refetch } = useFornecedores();
+  // Busca com debouncing
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm);
+
+  // Paginação
+  const PAGE_SIZE = 10;
+  const { currentPage, goToPage } = usePagination(0, PAGE_SIZE);
+
+  // React Query hooks com paginação e busca
+  const { data: fornecedoresData, isLoading, error, refetch } = useFornecedoresPaginated(currentPage, PAGE_SIZE, debouncedSearch);
   const createMutation = useCreateFornecedor();
   const updateMutation = useUpdateFornecedor();
   const deleteMutation = useDeleteFornecedor();
+
+  const fornecedores = fornecedoresData?.data || [];
+  const totalPages = fornecedoresData?.totalPages || 0;
+  const totalItems = fornecedoresData?.totalItems || 0;
+
+  // Resetar para página 1 quando a busca mudar
+  useEffect(() => {
+    goToPage(1);
+  }, [debouncedSearch, goToPage]);
 
   // Local state (UI apenas)
   const [open, setOpen] = useState(false);
@@ -237,12 +257,28 @@ export default function Fornecedores() {
         </Dialog>
       </div>
 
+      <div className="flex items-center gap-2">
+        <Search className="h-5 w-5 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome, CNPJ, telefone ou email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm"
+        />
+        {searchTerm && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchTerm("")}
+          >
+            Limpar
+          </Button>
+        )}
+      </div>
+
       <div className="bg-card rounded-lg border">
         <div className="overflow-x-auto">
-          {isLoading ? (
-            <LoadingState message="Carregando fornecedores..." />
-          ) : (
-            <Table>
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="whitespace-nowrap">Nome</TableHead>
@@ -253,10 +289,16 @@ export default function Fornecedores() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!fornecedores || fornecedores.length === 0 ? (
+                {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      Nenhum fornecedor cadastrado
+                      Carregando fornecedores...
+                    </TableCell>
+                  </TableRow>
+                ) : fornecedores.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      {searchTerm ? "Nenhum fornecedor encontrado para essa busca" : "Nenhum fornecedor cadastrado"}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -293,6 +335,20 @@ export default function Fornecedores() {
                 )}
               </TableBody>
             </Table>
+
+          {/* Controles de paginação */}
+          {!isLoading && fornecedores.length > 0 && (
+            <div className="px-6 pb-4">
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+                hasNextPage={currentPage < totalPages}
+                hasPreviousPage={currentPage > 1}
+                totalItems={totalItems}
+                pageSize={PAGE_SIZE}
+              />
+            </div>
           )}
         </div>
       </div>
