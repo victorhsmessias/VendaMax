@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui/form-field";
@@ -18,7 +18,7 @@ import { useProdutos } from "@/hooks/api/useProdutos";
 import { useFornecedores } from "@/hooks/api/useFornecedores";
 import { useCreateVenda } from "@/hooks/api/useVendas";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, ShoppingCart, DollarSign, X } from "lucide-react";
+import { Plus, Trash2, ShoppingCart, DollarSign, X, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import {
   Command,
@@ -26,7 +26,13 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface Cliente {
   id: string;
@@ -65,9 +71,21 @@ export default function NovaVenda() {
 
   // Local state - Comum a ambos os modos
   const [clienteId, setClienteId] = useState("");
+  const [clienteOpen, setClienteOpen] = useState(false);
   const [desconto, setDesconto] = useState("0");
   const [observacoes, setObservacoes] = useState("");
   const [parcelas, setParcelas] = useState("1");
+  
+  // Ref para controlar largura do popover no iPad
+  const clienteButtonRef = useRef<HTMLButtonElement>(null);
+  const [popoverWidth, setPopoverWidth] = useState<number | undefined>(undefined);
+  
+  // Atualizar largura do popover quando abrir (compatibilidade iPad/Safari)
+  useEffect(() => {
+    if (clienteOpen && clienteButtonRef.current) {
+      setPopoverWidth(clienteButtonRef.current.offsetWidth);
+    }
+  }, [clienteOpen]);
 
   // Local state - Modo com produtos
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
@@ -470,32 +488,50 @@ export default function NovaVenda() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <FormField label="Cliente" required>
-  <Select value={clienteId} onValueChange={setClienteId}>
-    <SelectTrigger>
-      <SelectValue placeholder="Digite ou selecione o cliente..." />
-    </SelectTrigger>
-
-    <SelectContent>
-      <Command>
-        <CommandInput placeholder="Buscar cliente..." />
-
-        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
-
-        <CommandGroup>
-          {clientes?.map((cliente) => (
-            <CommandItem
-              key={cliente.id}
-              value={cliente.nome}
-              onSelect={() => setClienteId(cliente.id)}
-            >
-              {cliente.nome}
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </Command>
-    </SelectContent>
-  </Select>
-</FormField>
+                  <Popover open={clienteOpen} onOpenChange={setClienteOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        ref={clienteButtonRef}
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={clienteOpen}
+                        className="w-full justify-between"
+                      >
+                        {clienteId
+                          ? clientes?.find((cliente) => cliente.id === clienteId)?.nome
+                          : "Digite ou selecione o cliente..."}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent 
+                      className="p-0" 
+                      align="start" 
+                      sideOffset={4}
+                      style={{ width: popoverWidth }}
+                    >
+                      <Command>
+                        <CommandInput placeholder="Buscar cliente..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {clientes?.map((cliente) => (
+                              <CommandItem
+                                key={cliente.id}
+                                value={cliente.nome}
+                                onSelect={() => {
+                                  setClienteId(cliente.id === clienteId ? "" : cliente.id);
+                                  setClienteOpen(false);
+                                }}
+                              >
+                                {cliente.nome}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </FormField>
 
                 <FormField label="Observações" htmlFor="observacoes">
                   <Textarea id="observacoes" value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={3} />
