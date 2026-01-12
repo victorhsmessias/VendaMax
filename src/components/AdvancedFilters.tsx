@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,9 +105,10 @@ export function AdvancedFilters({
 
   // Verifica se há algum filtro ativo
   const hasActiveFilters = activeCount > 0;
+  const [open, setOpen] = useState(false);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="relative">
           <Filter className="mr-2 h-4 w-4" />
@@ -256,14 +258,13 @@ export function AdvancedFilters({
             <div className="space-y-2">
               <Label className="text-sm font-medium">{customSelectLabel}</Label>
               <Select
-                value={(filters[customSelectKey] as string) || ""}
-                onValueChange={(value) => onFilterChange(customSelectKey, value || undefined)}
+                value={(filters[customSelectKey] as string) || undefined}
+                onValueChange={(value) => onFilterChange(customSelectKey, value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder={customSelectPlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
                   {customSelectOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}

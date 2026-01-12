@@ -45,7 +45,7 @@ export default function Produtos() {
 
   // Paginação
   const PAGE_SIZE = 10;
-  const { currentPage, goToPage } = usePagination(0, PAGE_SIZE);
+  const { currentPage, goToPage } = usePagination(1, PAGE_SIZE);
 
   // React Query hooks com paginação e busca
   const { data: produtosData, isLoading, error, refetch } = useProdutosPaginated(currentPage, PAGE_SIZE, debouncedSearch);
@@ -368,18 +368,19 @@ export default function Produtos() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Search className="h-5 w-5 text-muted-foreground" />
+        <Search className="h-5 w-5 text-muted-foreground shrink-0" />
         <Input
           placeholder="Buscar por nome ou código..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
+          className="flex-1"
         />
         {searchTerm && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setSearchTerm("")}
+            className="shrink-0"
           >
             Limpar
           </Button>

@@ -115,7 +115,7 @@ export default function Vendas() {
 
   // Paginação
   const PAGE_SIZE = 10;
-  const { currentPage, goToPage } = usePagination(0, PAGE_SIZE);
+  const { currentPage, goToPage } = usePagination(1, PAGE_SIZE);
 
   // Carregar clientes para o filtro de cliente
   const { data: clientes } = useClientes();
@@ -292,20 +292,21 @@ export default function Vendas() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-[250px]">
-            <Search className="h-5 w-5 text-muted-foreground" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Search className="h-5 w-5 text-muted-foreground shrink-0" />
             <Input
-              placeholder="Buscar por número da venda..."
+              placeholder="Buscar por nome do cliente..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="flex-1"
             />
             {searchTerm && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSearchTerm("")}
+                className="shrink-0"
               >
                 Limpar
               </Button>

@@ -85,10 +85,25 @@ export function useVendasPaginated(page: number = 1, pageSize: number = 10, filt
         .eq("user_id", userId)
         .order("data_venda", { ascending: false });
 
-      // Filtro de busca por texto (apenas numero_venda)
-      // NOTA: Busca por nome do cliente não é possível aqui porque clientes() é uma relação
+      // Filtro de busca por texto (busca por nome do cliente)
+      // Para buscar por cliente, primeiro buscamos os clientes que correspondem ao termo
+      // e depois filtramos as vendas por cliente_id
       if (filters.search) {
-        query = query.ilike("numero_venda", `%${filters.search}%`);
+        const { data: clientesEncontrados } = await supabase
+          .from("clientes")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("ativo", true)
+          .ilike("nome", `%${filters.search}%`);
+        
+        const clienteIds = clientesEncontrados?.map(c => c.id) || [];
+        
+        if (clienteIds.length > 0) {
+          query = query.in("cliente_id", clienteIds);
+        } else {
+          // Se não encontrou clientes, aplicar filtro impossível para retornar resultados vazios
+          query = query.eq("id", "00000000-0000-0000-0000-000000000000"); // UUID inválido para não retornar nada
+        }
       }
 
       // Filtro de data inicial
